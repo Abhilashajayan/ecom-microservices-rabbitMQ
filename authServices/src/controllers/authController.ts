@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { User } from '../model/userSchema';
 import bcrypt from 'bcrypt';
+import rabbitmq from '../event/rabbitmq'; 
+rabbitmq.connect(); 
+
 
 export const registerUser = async(reg: Request , res: Response): Promise<any>=>{
      const { name , email , password } = reg.body;
@@ -25,21 +28,32 @@ export const registerUser = async(reg: Request , res: Response): Promise<any>=>{
      }
 }
 
-export const userLogin = async(reg: Request , res: Response)=>{
-     const { email , password } = reg.body;
-     try{
-          const exitUser = await User.findOne({ email: email});
-          if(exitUser){
-               const isMatch = await bcrypt.compare(password, exitUser.password);
-                if (!isMatch)
-                    {
-                      return res.status(400).json({ error: "Invalid Password !!" });
-                    }
-                    return res.status(200).json({ exitUser,message :"the login sucess full" });
-          }else{
-                    return res.status(400).json({ error: "User does not exist" });
-          }
-     }catch(err){
-          res.status(500).json(err);
+export const userLogin = async (req: Request, res: Response): Promise<any> => {
+     const { email, password } = req.body;
+     try {
+         const existUser = await User.findOne({ email: email });
+ 
+         if (existUser) {
+             const isMatch = await bcrypt.compare(password, existUser.password);
+ 
+             if (!isMatch) {
+                 return res.status(400).json({ error: "Invalid Password !!" });
+             }
+             const channel = await rabbitmq.getChannel();
+             await channel.sendToQueue(
+                 'PRODUCT',
+                 Buffer.from(JSON.stringify({
+                     user: existUser.id,
+                 }))
+             );
+ 
+             return res.status(200).json({ user: existUser, message: "Login successful" });
+ 
+         } else {
+             return res.status(400).json({ error: "User does not exist" });
+         }
+     } catch (err) {
+         console.error('Error during login:', err);
+         res.status(500).json({ error: 'Internal Server Error' });
      }
-}
+ };
