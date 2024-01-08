@@ -1,0 +1,127 @@
+version: "3.8"
+
+services:
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3.9-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 60s
+      timeout: 40s
+      retries: 10
+    networks:
+      - ecom-rabbit-ts-network
+   
+
+  authServices:
+    build:
+      context: ./auth-services
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-db
+      - rabbitmq
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      MONGO_URI: mongodb://auth-db:27017/authdb
+      MESSAGE_BUS: amqp://rabbitmq
+    image: auth-services:latest
+    networks:
+      - ecom-rabbit-ts-network
+
+  productServices:
+    build:
+      context: ./product-services
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    depends_on:
+      - product-db
+      - rabbitmq
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      MONGO_URI: mongodb://product-db:27017/productdb
+      MESSAGE_BUS: amqp://rabbitmq
+    image: product-services:latest
+    networks:
+      - ecom-rabbit-ts-network
+
+  cartServices:
+    build:
+      context: ./cart-services
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    depends_on:
+      - cart-db
+      - rabbitmq
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      MONGO_URI: mongodb://cart-db:27017/cartdb
+      MESSAGE_BUS: amqp://rabbitmq
+    image: cart-services:latest
+    networks:
+      - ecom-rabbit-ts-network
+
+  orderServices:
+    build:
+      context: ./order-services
+      dockerfile: Dockerfile
+    ports:
+      - "3003:3003"
+    depends_on:
+      - order-db
+      - rabbitmq
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      MONGO_URI: mongodb://order-db:27017/orderdb
+      MESSAGE_BUS: amqp://rabbitmq
+    image: order-services:latest
+    networks:
+      - ecom-rabbit-ts-network
+
+  auth-db:
+    image: mongo
+    container_name: auth-db
+    ports:
+      - "27017:27017"
+    networks:
+      - ecom-rabbit-ts-network
+
+  product-db:
+    image: mongo
+    container_name: product-db
+    ports:
+      - "27018:27017"
+    networks:
+      - ecom-rabbit-ts-network
+
+  cart-db:
+    image: mongo
+    container_name: cart-db
+    ports:
+      - "27019:27017"
+    networks:
+      - ecom-rabbit-ts-network
+
+  order-db:
+    image: mongo
+    container_name: order-db
+    ports:
+      - "27020:27017"
+    networks:
+      - ecom-rabbit-ts-network
+
+networks:
+  ecom-rabbit-ts-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "192.168.0.2/24"
