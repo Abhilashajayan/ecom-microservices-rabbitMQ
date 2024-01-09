@@ -1,10 +1,12 @@
+// rabbitmq.js
 import amqp from 'amqplib';
 
 let connection: amqp.Connection | null = null;
 const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost';
+
 async function connect() {
-    const amqpServer = `amqp://${rabbitmqHost}:5672`;
     try {
+        const amqpServer = 'amqp://localhost:5672';
         connection = await amqp.connect(amqpServer);
         console.log("Connected to RabbitMQ");
     } catch (error) {
@@ -18,7 +20,8 @@ function getChannel() {
     }
     return connection.createChannel();
 }
-async function declareQueue(queueName:string) {
+
+async function declareQueue(queueName: string) {
     const channel = await getChannel();
     await channel.assertQueue(queueName);
 }
