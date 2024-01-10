@@ -1,8 +1,8 @@
-// rabbitmq.js
+
 import amqp from 'amqplib';
 
 let connection: amqp.Connection | null = null;
-const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost';
+
 
 async function connect() {
     try {
