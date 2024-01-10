@@ -2,24 +2,24 @@ version: "3.8"
 
 services:
   rabbitmq:
+    restart: always
     container_name: rabbitmq
-    image: rabbitmq:3.9-management-alpine
+    image: rabbitmq:3-management-alpine
     ports:
-      - "5672:5672"
       - "15672:15672"
+      - "5672:5672"
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      - RABBITMQ_DEFAULT_USER=username
+      - RABBITMQ_DEFAULT_PASS=password
     healthcheck:
-      test: ["CMD", "rabbitmqctl", "status"]
-      interval: 60s
-      timeout: 40s
-      retries: 10
+      test: ["CMD", "rabbitmqctl", "wait", "--timeout", "5"]
+      interval: 10s
+      timeout: 30s
+      retries: 3
     networks:
-      - ecom-rabbit-ts-network
-   
+      - mynetwork
 
-  authServices:
+  auth-services:
     build:
       context: ./auth-services
       dockerfile: Dockerfile
@@ -31,12 +31,12 @@ services:
     environment:
       RABBITMQ_HOST: rabbitmq
       MONGO_URI: mongodb://auth-db:27017/authdb
-      MESSAGE_BUS: amqp://rabbitmq
+      MESSAGE_BUS: amqp://username:password@rabbitmq:5672/
     image: auth-services:latest
     networks:
-      - ecom-rabbit-ts-network
+      - mynetwork
 
-  productServices:
+  product-services:
     build:
       context: ./product-services
       dockerfile: Dockerfile
@@ -48,12 +48,12 @@ services:
     environment:
       RABBITMQ_HOST: rabbitmq
       MONGO_URI: mongodb://product-db:27017/productdb
-      MESSAGE_BUS: amqp://rabbitmq
+      MESSAGE_BUS: amqp://username:password@rabbitmq:5672/
     image: product-services:latest
     networks:
-      - ecom-rabbit-ts-network
+      - mynetwork
 
-  cartServices:
+  cart-services:
     build:
       context: ./cart-services
       dockerfile: Dockerfile
@@ -65,12 +65,12 @@ services:
     environment:
       RABBITMQ_HOST: rabbitmq
       MONGO_URI: mongodb://cart-db:27017/cartdb
-      MESSAGE_BUS: amqp://rabbitmq
+      MESSAGE_BUS: amqp://username:password@rabbitmq:5672/
     image: cart-services:latest
     networks:
-      - ecom-rabbit-ts-network
+      - mynetwork
 
-  orderServices:
+  order-services:
     build:
       context: ./order-services
       dockerfile: Dockerfile
@@ -82,10 +82,10 @@ services:
     environment:
       RABBITMQ_HOST: rabbitmq
       MONGO_URI: mongodb://order-db:27017/orderdb
-      MESSAGE_BUS: amqp://rabbitmq
+      MESSAGE_BUS: amqp://username:password@rabbitmq:5672/
     image: order-services:latest
     networks:
-      - ecom-rabbit-ts-network
+      - mynetwork
 
   auth-db:
     image: mongo
@@ -93,7 +93,7 @@ services:
     ports:
       - "27017:27017"
     networks:
-      - ecom-rabbit-ts-network
+      - mynetwork
 
   product-db:
     image: mongo
@@ -101,7 +101,7 @@ services:
     ports:
       - "27018:27017"
     networks:
-      - ecom-rabbit-ts-network
+      - mynetwork
 
   cart-db:
     image: mongo
@@ -109,7 +109,7 @@ services:
     ports:
       - "27019:27017"
     networks:
-      - ecom-rabbit-ts-network
+      - mynetwork
 
   order-db:
     image: mongo
@@ -117,11 +117,11 @@ services:
     ports:
       - "27020:27017"
     networks:
-      - ecom-rabbit-ts-network
+      - mynetwork
 
 networks:
-  ecom-rabbit-ts-network:
+  mynetwork:
     driver: bridge
-    ipam:
-      config:
-        - subnet: "192.168.0.2/24"
+
+volumes:
+  rabbitmq-data:

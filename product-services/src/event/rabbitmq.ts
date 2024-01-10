@@ -3,7 +3,7 @@ import amqp from 'amqplib';
 let connection: amqp.Connection | null = null;
 const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost';
 async function connect() {
-    const amqpServer = `amqp://${rabbitmqHost}:5672`;
+    const amqpServer = 'amqp://localhost:5672';
     try {
         connection = await amqp.connect(amqpServer);
         console.log("Connected to RabbitMQ");
